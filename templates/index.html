@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seed Cross Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+
+    --paper: #EAE8DA;
+    --card: #DFDCC8;
+    --card-hi: #F2F0E4;
+    --ink: #22301C;
+    --ink-soft: #5A6350;
+    --wheat: #B4842A;
+    --leaf: #3F6B3C;
+    --rust: #9A4B34;
+    --line: #C7C2A8;
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --paper: #1B1E16;
+      --card: #242820;
+      --card-hi: #2C3126;
+      --ink: #E8E6D8;
+      --ink-soft: #A8A691;
+      --wheat: #D9AE55;
+      --leaf: #6FA968;
+      --rust: #C97A5C;
+      --line: #3A3E30;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1B1E16;
+    --card: #242820;
+    --card-hi: #2C3126;
+    --ink: #E8E6D8;
+    --ink-soft: #A8A691;
+    --wheat: #D9AE55;
+    --leaf: #6FA968;
+    --rust: #C97A5C;
+    --line: #3A3E30;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  header {
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-size: clamp(28px, 4vw, 38px);
+    margin: 0 0 6px;
+  }
+  header p { margin: 0; color: var(--ink-soft); font-size: 15px; max-width: 46ch; }
+
+  .cross-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 18px;
+    align-items: stretch;
+  }
+  @media (max-width: 640px) {
+    .cross-row { grid-template-columns: 1fr; }
+    .cross-symbol { display: none; }
+  }
+  .cross-symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    color: var(--wheat);
+    padding-top: 20px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 22px;
+  }
+  .card h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 19px;
+    margin: 0 0 16px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 14px 0 6px;
+  }
+  label:first-of-type { margin-top: 0; }
+  select, input[type="number"] {
+    width: 100%;
+    background: var(--card-hi);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 2px;
+    padding: 9px 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+  }
+  select:focus, input:focus, button:focus, input[type="range"]:focus {
+    outline: 2px solid var(--wheat);
+    outline-offset: 1px;
+  }
+
+  .controls {
+    margin-top: 22px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 22px;
+  }
+  .distance-row { display: flex; align-items: center; gap: 14px; }
+  .distance-row input[type="range"] { flex: 1; accent-color: var(--wheat); }
+  .distance-value { font-variant-numeric: tabular-nums; width: 2.6em; text-align: right; color: var(--ink-soft); }
+  .checkbox-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+  .checkbox-row input { width: 17px; height: 17px; accent-color: var(--wheat); }
+  .checkbox-row label { margin: 0; font-size: 14px; color: var(--ink); }
+
+  button.predict {
+    margin-top: 20px;
+    width: 100%;
+    background: var(--leaf);
+    color: var(--card-hi);
+    border: none;
+    border-radius: 2px;
+    padding: 13px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  button.predict:hover { filter: brightness(1.08); }
+
+  .result {
+    margin-top: 22px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 24px 22px;
+    background: var(--card);
+    display: none;
+  }
+  .result.show { display: block; }
+  .result .yield-num {
+    font-family: 'Fraunces', serif;
+    font-size: 44px;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .result .yield-label { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
+  .stat-row { display: flex; gap: 28px; margin-top: 18px; flex-wrap: wrap; }
+  .stat { }
+  .stat .n { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 12px; color: var(--ink-soft); }
+  .positive { color: var(--leaf); }
+  .negative { color: var(--rust); }
+  .verdict {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+  }
+
+  section.block {
+    margin-top: 44px;
+  }
+  section.block h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 20px;
+    margin: 0 0 4px;
+  }
+  section.block p.sub { color: var(--ink-soft); font-size: 13px; margin: 0 0 16px; }
+
+  table.registry {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  table.registry th, table.registry td {
+    text-align: left;
+    padding: 9px 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  table.registry th { color: var(--ink-soft); font-weight: 500; font-size: 12px; }
+
+  .add-line-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .add-line-row input { width: 110px; }
+  .add-line-row button {
+    background: transparent;
+    border: 1px solid var(--wheat);
+    color: var(--wheat);
+    border-radius: 2px;
+    padding: 8px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .add-line-row button:hover { background: var(--wheat); color: var(--card-hi); }
+  .del-btn {
+    background: transparent;
+    border: none;
+    color: var(--rust);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+  }
+  .del-btn:hover { text-decoration: underline; }
+
+  .tree {
+    font-size: 14px;
+    line-height: 1.9;
+    white-space: pre;
+    font-family: 'Inter', sans-serif;
+  }
+  .tree .name { color: var(--wheat); font-weight: 600; }
+  .tree .tag { color: var(--ink-soft); font-size: 12px; }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Seed Cross Predictor</h1>
+      <p>Pick two parent lines and a genetic distance to estimate hybrid yield and heterosis.</p>
+    </div>
+  </header>
+
+  <div class="cross-row">
+    <div class="card">
+      <h2>Parent A</h2>
+      <label for="lineA">Seed line</label>
+      <select id="lineA"></select>
+      <label for="yieldA">Yield (q/ha)</label>
+      <input type="number" id="yieldA" value="35" min="10" max="80" step="0.5">
+    </div>
+    <div class="cross-symbol">×</div>
+    <div class="card">
+      <h2>Parent B</h2>
+      <label for="lineB">Seed line</label>
+      <select id="lineB"></select>
+      <label for="yieldB">Yield (q/ha)</label>
+      <input type="number" id="yieldB" value="38" min="10" max="80" step="0.5">
+    </div>
+  </div>
+
+  <div class="controls">
+    <label for="distance">Genetic distance between parents</label>
+    <div class="distance-row">
+      <input type="range" id="distance" min="0" max="1" step="0.05" value="0.6">
+      <span class="distance-value" id="distanceValue">0.60</span>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="sameGroup">
+      <label for="sameGroup">Both parents are from the same heterotic group</label>
+    </div>
+    <button class="predict" id="predictBtn">Predict cross</button>
+  </div>
+
+  <div class="result" id="result">
+    <div class="yield-num" id="yieldNum">—</div>
+    <div class="yield-label">predicted hybrid yield, q/ha</div>
+    <div class="stat-row">
+      <div class="stat">
+        <div class="n" id="heterosisNum">—</div>
+        <div class="l">heterosis vs. mid-parent</div>
+      </div>
+      <div class="stat">
+        <div class="n" id="bestParentNum">—</div>
+        <div class="l">vs. better parent</div>
+      </div>
+    </div>
+    <div class="verdict" id="verdictText"></div>
+    <button class="predict" id="explainBtn" style="margin-top:16px;">Explain with AI (Ollama)</button>
+    <div class="verdict" id="aiReview"></div>
+  </div>
+
+  <section class="block">
+    <h2>Seed line registry</h2>
+    <p class="sub">Lines are stored by name for quick lookup — pick any two above, or add your own.</p>
+    <table class="registry">
+      <thead><tr><th>Line</th><th>Yield (q/ha)</th><th></th></tr></thead>
+      <tbody id="registryBody"></tbody>
+    </table>
+    <div class="add-line-row">
+      <input type="text" id="newName" placeholder="Name">
+      <input type="number" id="newYield" placeholder="Yield">
+      <button id="addLineBtn">Add line</button>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Best pairs</h2>
+    <p class="sub">Tries every combination of registered lines and ranks them by predicted yield.</p>
+    <button class="predict" id="bestBtn" style="max-width:220px;">Find best pairs</button>
+    <table class="registry" id="bestTable" style="margin-top:16px; display:none;">
+      <thead><tr><th>Cross</th><th>Predicted yield</th></tr></thead>
+      <tbody id="bestBody"></tbody>
+    </table>
+  </section>
+
+  <section class="block">
+    <h2>Prediction history</h2>
+    <p class="sub">Every cross you've predicted this session.</p>
+    <table class="registry" id="historyTable">
+      <thead><tr><th>Parents</th><th>Distance</th><th>Predicted yield</th><th>Heterosis</th></tr></thead>
+      <tbody id="historyBody"></tbody>
+    </table>
+  </section>
+
+  <section class="block">
+    <h2>Disease resistance gene cross</h2>
+    <p class="sub">R = resistant allele (dominant), r = susceptible allele (recessive). Works out offspring odds directly, no ML involved — this is plain Mendelian genetics.</p>
+    <div class="cross-row">
+      <div class="card">
+        <h2>Parent A</h2>
+        <label for="geneLineA">Seed line</label>
+        <select id="geneLineA"></select>
+        <label for="genotypeA">Genotype</label>
+        <input type="text" id="genotypeA" maxlength="2" value="Rr">
+      </div>
+      <div class="cross-symbol">×</div>
+      <div class="card">
+        <h2>Parent B</h2>
+        <label for="geneLineB">Seed line</label>
+        <select id="geneLineB"></select>
+        <label for="genotypeB">Genotype</label>
+        <input type="text" id="genotypeB" maxlength="2" value="rr">
+      </div>
+    </div>
+    <button class="predict" id="geneCrossBtn" style="margin-top:16px;">Calculate gene cross</button>
+    <div class="result" id="geneResult">
+      <div class="stat-row">
+        <div class="stat">
+          <div class="n positive" id="resistantPct">—</div>
+          <div class="l">offspring resistant</div>
+        </div>
+        <div class="stat">
+          <div class="n negative" id="susceptiblePct">—</div>
+          <div class="l">offspring susceptible</div>
+        </div>
+      </div>
+      <div class="verdict" id="genotypeBreakdown"></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Pedigree</h2>
+    <p class="sub">Mother on top, father below — an example three-generation cross.</p>
+    <div class="tree" id="tree"></div>
+  </section>
+
+  <footer>
+    Predictions are estimated from parent yield, genetic distance and heterotic group, following the same logic as the trained model — not live field data.
+  </footer>
+
+</div>
+
+<script>
+  var registry = {};
+
+  function loadRegistry() {
+    fetch('/api/lines')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        registry = data;
+        renderRegistry();
+      });
+  }
+
+  function renderRegistry() {
+    var body = document.getElementById('registryBody');
+    body.innerHTML = '';
+    for (var name in registry) {
+      var row = document.createElement('tr');
+      row.innerHTML = '<td>' + name + '</td><td>' + registry[name] + '</td>' +
+        '<td><button class="del-btn" data-name="' + name + '">remove</button></td>';
+      body.appendChild(row);
+    }
+    var delButtons = body.querySelectorAll('.del-btn');
+    for (var i = 0; i < delButtons.length; i++) {
+      delButtons[i].addEventListener('click', function () {
+        fetch('/api/lines/' + this.getAttribute('data-name'), { method: 'DELETE' })
+          .then(function (res) { return res.json(); })
+          .then(function (data) { registry = data; renderRegistry(); });
+      });
+    }
+    var selA = document.getElementById('lineA');
+    var selB = document.getElementById('lineB');
+    var prevA = selA.value, prevB = selB.value;
+    selA.innerHTML = ''; selB.innerHTML = '';
+    for (var name2 in registry) {
+      var optA = document.createElement('option');
+      optA.value = name2; optA.textContent = name2;
+      selA.appendChild(optA);
+      var optB = document.createElement('option');
+      optB.value = name2; optB.textContent = name2;
+      selB.appendChild(optB);
+    }
+    if (prevA && registry[prevA] !== undefined) selA.value = prevA;
+    if (prevB && registry[prevB] !== undefined) selB.value = prevB;
+    else if (selB.options.length > 1) selB.selectedIndex = 1;
+    if (registry[selA.value] !== undefined) document.getElementById('yieldA').value = registry[selA.value];
+    if (registry[selB.value] !== undefined) document.getElementById('yieldB').value = registry[selB.value];
+  }
+
+  document.getElementById('lineA').addEventListener('change', function () {
+    document.getElementById('yieldA').value = registry[this.value];
+  });
+  document.getElementById('lineB').addEventListener('change', function () {
+    document.getElementById('yieldB').value = registry[this.value];
+  });
+
+  document.getElementById('addLineBtn').addEventListener('click', function () {
+    var name = document.getElementById('newName').value.trim();
+    var y = parseFloat(document.getElementById('newYield').value);
+    if (!name || isNaN(y)) return;
+    fetch('/api/lines', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, yield: y })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        registry = data;
+        renderRegistry();
+      });
+    document.getElementById('newName').value = '';
+    document.getElementById('newYield').value = '';
+  });
+
+  function printTree(node, space, out) {
+    if (!node) return;
+    var tag = (!node.left && !node.right) ? ' (founder)' : '';
+    out.push(space + node.name + tag);
+    if (node.left) { out.push(space + '  mother:'); printTree(node.left, space + '    ', out); }
+    if (node.right) { out.push(space + '  father:'); printTree(node.right, space + '    ', out); }
+  }
+
+  function loadPedigree() {
+    fetch('/api/pedigree')
+      .then(function (res) { return res.json(); })
+      .then(function (tree) {
+        var lines = [];
+        printTree(tree, '', lines);
+        document.getElementById('tree').textContent = lines.join('\n');
+      });
+  }
+
+  var distanceInput = document.getElementById('distance');
+  var distanceValue = document.getElementById('distanceValue');
+  distanceInput.addEventListener('input', function () {
+    distanceValue.textContent = parseFloat(this.value).toFixed(2);
+  });
+
+  function verdictFor(vsBest, sameGroup) {
+    if (sameGroup) return 'Same heterotic group — hybrid vigour is weak. Try parents from different groups.';
+    if (vsBest >= 10) return 'Strong cross — clears the usual 10% bar over the better parent.';
+    if (vsBest >= 0) return 'Marginal cross — some gain, but below the usual 10% bar.';
+    return 'Weak cross — predicted below the better parent alone.';
+  }
+
+  var lastPrediction = null;
+
+  document.getElementById('predictBtn').addEventListener('click', function () {
+    var btn = this;
+    var yieldA = parseFloat(document.getElementById('yieldA').value);
+    var yieldB = parseFloat(document.getElementById('yieldB').value);
+    var distance = parseFloat(distanceInput.value);
+    var sameGroup = document.getElementById('sameGroup').checked;
+
+    btn.textContent = 'Predicting...';
+    btn.disabled = true;
+
+    fetch('/api/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        yield_a: yieldA,
+        yield_b: yieldB,
+        distance: distance,
+        same_group: sameGroup
+      })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (r) {
+        document.getElementById('yieldNum').textContent = r.predicted_yield.toFixed(1);
+        var hEl = document.getElementById('heterosisNum');
+        hEl.textContent = (r.heterosis_percent >= 0 ? '+' : '') + r.heterosis_percent.toFixed(1) + '%';
+        hEl.className = 'n ' + (r.heterosis_percent >= 0 ? 'positive' : 'negative');
+        var bEl = document.getElementById('bestParentNum');
+        bEl.textContent = (r.vs_best_parent_percent >= 0 ? '+' : '') + r.vs_best_parent_percent.toFixed(1) + '%';
+        bEl.className = 'n ' + (r.vs_best_parent_percent >= 0 ? 'positive' : 'negative');
+        document.getElementById('verdictText').textContent = verdictFor(r.vs_best_parent_percent, sameGroup);
+        if (r.warning) {
+          document.getElementById('verdictText').textContent += ' ⚠ ' + r.warning;
+        }
+        document.getElementById('result').classList.add('show');
+        document.getElementById('aiReview').textContent = '';
+        lastPrediction = {
+          yield_a: yieldA, yield_b: yieldB, distance: distance, same_group: sameGroup,
+          predicted_yield: r.predicted_yield, heterosis_percent: r.heterosis_percent,
+          vs_best_parent_percent: r.vs_best_parent_percent
+        };
+        loadHistory();
+      })
+      .catch(function () {
+        document.getElementById('verdictText').textContent = 'Could not reach the server. Is app.py running?';
+        document.getElementById('result').classList.add('show');
+      })
+      .finally(function () {
+        btn.textContent = 'Predict cross';
+        btn.disabled = false;
+      });
+  });
+
+  document.getElementById('bestBtn').addEventListener('click', function () {
+    var btn = this;
+    btn.textContent = 'Checking...';
+    btn.disabled = true;
+    fetch('/api/best')
+      .then(function (res) { return res.json(); })
+      .then(function (results) {
+        var body = document.getElementById('bestBody');
+        body.innerHTML = '';
+        for (var i = 0; i < results.length; i++) {
+          var row = document.createElement('tr');
+          row.innerHTML = '<td>' + results[i].pair + '</td><td>' + results[i].predicted_yield + '</td>';
+          body.appendChild(row);
+        }
+        document.getElementById('bestTable').style.display = 'table';
+      })
+      .finally(function () {
+        btn.textContent = 'Find best pairs';
+        btn.disabled = false;
+      });
+  });
+
+  function loadHistory() {
+    fetch('/api/history')
+      .then(function (res) { return res.json(); })
+      .then(function (records) {
+        var body = document.getElementById('historyBody');
+        body.innerHTML = '';
+        for (var i = 0; i < records.length; i++) {
+          var r = records[i];
+          var row = document.createElement('tr');
+          row.innerHTML = '<td>' + r.yield_a + ' x ' + r.yield_b + '</td>' +
+            '<td>' + r.distance + '</td>' +
+            '<td>' + r.predicted_yield + '</td>' +
+            '<td>' + (r.heterosis_percent >= 0 ? '+' : '') + r.heterosis_percent + '%</td>';
+          body.appendChild(row);
+        }
+      });
+  }
+
+  loadRegistry();
+  loadPedigree();
+  loadHistory();
+
+  var geneRegistry = {};
+
+  function loadGenes() {
+    fetch('/api/genes')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        geneRegistry = data;
+        var selA = document.getElementById('geneLineA');
+        var selB = document.getElementById('geneLineB');
+        selA.innerHTML = ''; selB.innerHTML = '';
+        for (var name in geneRegistry) {
+          var optA = document.createElement('option');
+          optA.value = name; optA.textContent = name;
+          selA.appendChild(optA);
+          var optB = document.createElement('option');
+          optB.value = name; optB.textContent = name;
+          selB.appendChild(optB);
+        }
+        if (selB.options.length > 1) selB.selectedIndex = 1;
+        document.getElementById('genotypeA').value = geneRegistry[selA.value];
+        document.getElementById('genotypeB').value = geneRegistry[selB.value];
+      });
+  }
+
+  document.getElementById('geneLineA').addEventListener('change', function () {
+    document.getElementById('genotypeA').value = geneRegistry[this.value];
+  });
+  document.getElementById('geneLineB').addEventListener('change', function () {
+    document.getElementById('genotypeB').value = geneRegistry[this.value];
+  });
+
+  document.getElementById('geneCrossBtn').addEventListener('click', function () {
+    var genotypeA = document.getElementById('genotypeA').value.trim();
+    var genotypeB = document.getElementById('genotypeB').value.trim();
+    if (genotypeA.length !== 2 || genotypeB.length !== 2) {
+      alert('Genotype must be two letters, e.g. Rr, RR or rr');
+      return;
+    }
+    fetch('/api/gene_cross', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ genotype_a: genotypeA, genotype_b: genotypeB })
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (r) {
+        document.getElementById('resistantPct').textContent = r.resistant_percent + '%';
+        document.getElementById('susceptiblePct').textContent = r.susceptible_percent + '%';
+        var parts = [];
+        for (var g in r.genotype_percent) {
+          parts.push(g + ': ' + r.genotype_percent[g] + '%');
+        }
+        document.getElementById('genotypeBreakdown').textContent = 'Genotypes — ' + parts.join(', ');
+        document.getElementById('geneResult').classList.add('show');
+      });
+  });
+
+  loadGenes();
+
+  document.getElementById('explainBtn').addEventListener('click', function () {
+    if (!lastPrediction) {
+      alert('Predict a cross first.');
+      return;
+    }
+    var btn = this;
+    var out = document.getElementById('aiReview');
+    btn.textContent = 'Asking Ollama...';
+    btn.disabled = true;
+    out.textContent = '';
+
+    fetch('/api/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(lastPrediction)
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        out.textContent = data.review || data.error;
+      })
+      .catch(function () {
+        out.textContent = 'Could not reach the server.';
+      })
+      .finally(function () {
+        btn.textContent = 'Explain with AI (Ollama)';
+        btn.disabled = false;
+      });
+  });
+</script>
+</body>
+</html>
